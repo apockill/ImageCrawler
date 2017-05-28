@@ -1,16 +1,21 @@
 import sys
+from crawler import Crawler
+from config import Config
 from PyQt5 import QtCore, QtWidgets, QtGui  # All GUI things
+from results_gui import ResultsList
 
 
 class MainWindow(QtWidgets.QDialog):
-
-
     def __init__(self):
         super().__init__()
+
+        self.config = Config()
+        self.crawler = None  # Set in the start_scan() function
 
         # Init UI Globals
         self.scan_btn = QtWidgets.QPushButton("Start Search")
         self.progress_bar = QtWidgets.QProgressBar(self)
+        self.results_lst = ResultsList(self)
 
         # Initialize the UI
         self.init_UI()
@@ -18,20 +23,21 @@ class MainWindow(QtWidgets.QDialog):
 
 
     def init_UI(self):
-        # Set up progress bar
-        # self.progress_bar.setGeometry(200, 80, 250, 200)
-
         # Set up buttons
-        self.scan_btn.setToolTip("This will start searching the websites specified in the list of websites to search")
 
+        self.scan_btn.setToolTip("This will start searching the websites specified in the list of websites to search")
         self.scan_btn.clicked.connect(self.start_scan)
 
         row1 = QtWidgets.QHBoxLayout()
-        row1.addWidget(self.progress_bar)
-        row1.addWidget(self.scan_btn)
+        row1.addWidget(self.results_lst)
+
+        row2 = QtWidgets.QHBoxLayout()
+        row2.addWidget(self.progress_bar)
+        row2.addWidget(self.scan_btn)
 
         column1 = QtWidgets.QVBoxLayout()
         column1.addLayout(row1)
+        column1.addLayout(row2)
 
         self.setLayout(column1)
         self.setWindowTitle('')
@@ -47,12 +53,17 @@ class MainWindow(QtWidgets.QDialog):
         Disables button while scan is running
         :return:
         """
-        self.scan_btn.setDisabled(True)
 
+        # Disable the scan button
+        self.scan_btn.setDisabled(True)
+        # self.results_lst.add_item("www.amazon.com", "some image description")
+
+        # Start crawling in another thread
+        self.crawler = Crawler(self.config.websites)
 
     # QT Events
     def closeEvent(self, event):
-        pass
+        self.crawler.close()
 
 
 
