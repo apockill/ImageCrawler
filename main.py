@@ -1,4 +1,5 @@
 import sys
+import Paths
 from crawler import Crawler
 from config import Config
 from PyQt5 import QtCore, QtWidgets, QtGui  # All GUI things
@@ -11,7 +12,9 @@ Settings button is disabled
 
 Initialization of crawler must catch FILENOTFOUNDERROR in case the chromedriver.exe is not in the same directory
 
-The first time you start scan, check to make sure there is > 1 websites in the website list
+X The first time you start scan, check to make sure there is > 1 websites in the website list
+
+Settings: Maximum amount of browser instances
 """
 
 
@@ -34,7 +37,7 @@ class MainWindow(QtWidgets.QDialog):
 
     def init_UI(self):
         # Set up buttons
-
+        self.scan_btn.setIcon(QtGui.QIcon(Paths.start_scan))
         self.scan_btn.setToolTip("This will start searching the websites specified in the list of websites to search")
         self.scan_btn.clicked.connect(self.start_scan)
 
@@ -63,20 +66,23 @@ class MainWindow(QtWidgets.QDialog):
         :return:
         """
 
+        # If no websites exist in the list
         if len(self.config.websites) == 0:
             QtWidgets.QMessageBox.question(self, 'Can Not Continue',
-                                               "You have not specified any URL's to scan. Try adding some!",
-                                               QtWidgets.QMessageBox.Ok)
+                                           "You have not specified any URL's to scan. Try adding some!",
+                                           QtWidgets.QMessageBox.Ok)
             return
 
         self.crawler = Crawler(self.config.websites)
 
         # Disable the scan button
         self.scan_btn.setDisabled(True)
+
         # self.results_lst.add_item("www.amazon.com", "some image description")
 
         # Start crawling in another thread
         self.crawler.start()
+
 
     # QT Events
     def closeEvent(self, event):

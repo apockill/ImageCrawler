@@ -1,7 +1,13 @@
 # -*- mode: python -*-
 
 block_cipher = None
+icon_dir = "Icons\\"
+icon_list = ["start_scan.png",
+             "settings.png"]
 
+data = []
+for icon in icon_list:
+    data.append((os.path.join(icon_dir, icon), os.path.join(icon_dir, icon), 'DATA'))
 
 a = Analysis(['main.py'],
              pathex=['C:\\Users\\Alex Thiel\\Google Drive\\Projects\\Project - 2017 - NVIDIA Marketing Tool\\ImageCrawler'],
@@ -20,7 +26,7 @@ exe = EXE(pyz,
           a.scripts,
           a.binaries,
           a.zipfiles,
-          a.datas,
+          a.datas + data,
           name='main',
           debug=False,
           strip=False,
