@@ -8,13 +8,11 @@ from contextlib import closing
 
 from selenium.webdriver import Chrome
 
-
 def _same_domain(url1, url2):
     """Returns true if the two domains have the same domain.
     :return: true if domains are the same
     """
     return urlparse(url1).netloc == urlparse(url2).netloc
-
 
 class Crawler(Thread):
     """A basic web crawler that looks for image URLs recursively.
@@ -38,6 +36,7 @@ class Crawler(Thread):
         self.__found_image_urls = []
         self.__max_depth = max_depth
 
+
     def run(self):
         """Starts the crawling process the listed websites. The results queue
         will start filling up with image URLs.
@@ -49,6 +48,7 @@ class Crawler(Thread):
                 self._crawl_page(url)
 
         self.__running = False
+
 
     def get_image_url(self):
         """Blocks until a new image URL has been retrieved or the crawler has
@@ -64,6 +64,7 @@ class Crawler(Thread):
                 pass
 
         return None
+
 
     def _crawl_page(self, url, depth=0):
         """Crawls the given page for images and links to other webpages. Image
@@ -97,6 +98,7 @@ class Crawler(Thread):
             if not link_url in self.__crawled_urls and _same_domain(url, link_url):
                 self._crawl_page(link_url, depth=depth+1)
 
+
     def _get_image_urls(self):
         """Returns the URLs of all images in the current page.
 
@@ -110,6 +112,7 @@ class Crawler(Thread):
 
         return urls
 
+
     def _get_link_urls(self):
         """Returns the URLs of all links in the current page.
 
@@ -122,6 +125,7 @@ class Crawler(Thread):
             urls.append(link.get_attribute("href"))
 
         return urls
+
 
     def close(self):
         """Prematurely stops crawling pages.
