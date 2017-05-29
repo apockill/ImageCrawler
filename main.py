@@ -6,11 +6,12 @@ from results_gui import ResultsList
 
 
 class MainWindow(QtWidgets.QDialog):
+
     def __init__(self):
         super().__init__()
 
         self.config = Config()
-        self.crawler = None  # Set in the start_scan() function
+        self.crawler = Crawler(self.config.websites)
 
         # Init UI Globals
         self.scan_btn = QtWidgets.QPushButton("Start Search")
@@ -19,8 +20,6 @@ class MainWindow(QtWidgets.QDialog):
 
         # Initialize the UI
         self.init_UI()
-
-
 
     def init_UI(self):
         # Set up buttons
@@ -44,7 +43,6 @@ class MainWindow(QtWidgets.QDialog):
         self.show()
 
 
-
     # Controls Events
     def start_scan(self):
         """
@@ -59,13 +57,11 @@ class MainWindow(QtWidgets.QDialog):
         # self.results_lst.add_item("www.amazon.com", "some image description")
 
         # Start crawling in another thread
-        self.crawler = Crawler(self.config.websites)
+        self.crawler.start()
 
     # QT Events
     def closeEvent(self, event):
         self.crawler.close()
-
-
 
 
 if __name__ == '__main__':
