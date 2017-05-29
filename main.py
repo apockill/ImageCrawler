@@ -6,15 +6,14 @@ from PyQt5 import QtCore, QtWidgets, QtGui  # All GUI things
 from results_gui import ResultsList
 
 """
-TODO: Add settings
+TODO
 When "start scan" is pressed, self.crawler is constructed with the settings
-Settings button is disabled
 
 Initialization of crawler must catch FILENOTFOUNDERROR in case the chromedriver.exe is not in the same directory
 
-X The first time you start scan, check to make sure there is > 1 websites in the website list
-
-Settings: Maximum amount of browser instances
+Settings:
+    Maximum amount of browser instances
+    Maximum depth of search
 """
 
 
@@ -37,22 +36,31 @@ class MainWindow(QtWidgets.QDialog):
 
     def init_UI(self):
         # Set up buttons
+        self.settings_btn.setIcon(QtGui.QIcon(Paths.settings))
         self.scan_btn.setIcon(QtGui.QIcon(Paths.start_scan))
+
         self.scan_btn.setToolTip("This will start searching the websites specified in the list of websites to search")
+        self.settings_btn.setToolTip("This will open a settings window to configure your scan")
+
         self.scan_btn.clicked.connect(self.start_scan)
+        self.settings_btn.clicked.connect(self.open_settings)
+
+        col2 = QtWidgets.QVBoxLayout()
+        col2.addWidget(self.settings_btn)
+        col2.addStretch(1)
+        col2.addWidget(self.scan_btn)
+
+
+        col1 = QtWidgets.QVBoxLayout()
+        col1.addWidget(self.results_lst)
+        col1.addWidget(self.progress_bar)
+
 
         row1 = QtWidgets.QHBoxLayout()
-        row1.addWidget(self.results_lst)
+        row1.addLayout(col1)
+        row1.addLayout(col2)
 
-        row2 = QtWidgets.QHBoxLayout()
-        row2.addWidget(self.progress_bar)
-        row2.addWidget(self.scan_btn)
-
-        column1 = QtWidgets.QVBoxLayout()
-        column1.addLayout(row1)
-        column1.addLayout(row2)
-
-        self.setLayout(column1)
+        self.setLayout(row1)
         self.setWindowTitle('')
         self.show()
 
@@ -82,6 +90,76 @@ class MainWindow(QtWidgets.QDialog):
 
         # Start crawling in another thread
         self.crawler.start()
+
+
+    def open_settings(self):
+        self.settings_btn.setDisabled(True)
+
+        window = QtWidgets.QDialog()
+
+        def addRow(left, right):
+            right.setFixedWidth(100)
+            row = QtWidgets.QHBoxLayout()
+            row.addStretch(1)
+            row.addWidget(left)
+            row.addWidget(right)
+            window.content.addLayout(row)
+
+        # Create the apply/cancel buttons, connect them, and format them
+        window.okBtn = QtWidgets.QPushButton('Ok')
+        window.okBtn.setMaximumWidth(100)
+        window.okBtn.clicked.connect(window.accept)
+
+        # Create a content box for the command to fill out parameters and GUI elements
+        window.content = QtWidgets.QVBoxLayout()
+        window.content.setContentsMargins(20, 10, 20, 10)
+
+        # Now that the window is 'dressed', add "Cancel" and "Apply" buttons
+        buttonRow = QtWidgets.QHBoxLayout()
+        buttonRow.addStretch(1)
+        buttonRow.addWidget(window.okBtn)
+
+        # Create the main vertical layout, add everything to it
+        window.mainVLayout = QtWidgets.QVBoxLayout()
+        window.mainVLayout.addLayout(window.content)
+        window.mainVLayout.addStretch(1)
+
+        # Set the main layout and general window parameters
+        window.setLayout(window.mainVLayout)
+        window.setWindowTitle("Scan Settings")
+        window.setWindowIcon(QtGui.QIcon(Paths.settings))
+
+        # Dress the base window (this is where the child actually puts the content into the widget)
+        descLbl = QtWidgets.QLabel("Customize Your Scan")
+
+        depth_lbl = QtWidgets.QLabel("Scan Depth")
+        brwsr_lbl = QtWidgets.QLabel("Maximum Open Browsers")
+
+        window.depth_chk = QtWidgets.QLineEdit()
+        window.brwsr_chk = QtWidgets.QLineEdit()  # Show prints from robot class
+
+        #
+        window.depth_chk.setText(str(self.config.search_depth))
+        window.brwsr_chk.setText(str(self.config.max_browsers))
+
+        window.content.addWidget(descLbl)
+        addRow(depth_lbl, window.depth_chk)
+        addRow(brwsr_lbl, window.brwsr_chk)
+
+        window.mainVLayout.addLayout(buttonRow)  # Add button after, so hints appear above buttons
+
+        # Run the info window and prevent other windows from being clicked while open:
+        accepted = window.exec_()
+
+        if accepted:
+            self.config.search_depth = window.depth_chk.text()
+            self.config.max_browsers = window.brwsr_chk.text()
+
+        # Make sure QT properly handles the memory after this function ends
+        window.close()
+        window.deleteLater()
+
+        self.settings_btn.setEnabled(True)
 
 
     # QT Events
