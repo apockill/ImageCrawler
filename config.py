@@ -21,10 +21,15 @@ class Config:
         """
         web_list = []
         with self.lock:
-            with open(self.WEBSITE_FILE, "r") as file:
-                for line in file:
-                    line = line.replace('\n', '')
-                    web_list.append(line)
+            try:
+                with open(self.WEBSITE_FILE, "r") as file:
+                    for line in file:
+                        line = line.replace('\n', '')
+                        web_list.append(line)
+            except FileNotFoundError:
+                # Return default empty value if the file does not exist
+                return web_list
+
         return web_list
 
     @websites.setter
