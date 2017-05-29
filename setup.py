@@ -5,5 +5,5 @@ setup(
         version='1.0',
         description='Recursively crawls webpages looking for images',
         author='Alex Thiel and Tyler Compton',
-        packages=['PyQt5', 'selenium']
+        packages=['PyQt5', 'selenium', 'pillow']
         )

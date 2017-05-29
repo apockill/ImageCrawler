@@ -6,7 +6,11 @@ import queue
 from urllib.parse import urlparse
 from contextlib import closing
 
+from PIL import Image
+import urllib
+import numpy as np
 from selenium.webdriver import Chrome
+from selenium.common.exceptions import TimeoutException
 
 def _same_domain(url1, url2):
     """Returns true if the two domains have the same domain.
@@ -14,15 +18,18 @@ def _same_domain(url1, url2):
     """
     return urlparse(url1).netloc == urlparse(url2).netloc
 
+
 class Crawler(Thread):
     """A basic web crawler that looks for image URLs recursively.
     """
 
-    def __init__(self, website_list, max_depth=5):
+    def __init__(self, website_list, max_depth=5, max_browser_instances=5):
         """Creates a new web crawler.
 
         :param website_list: The list of web URLs to start crawling from
         :param max_depth: The maximum amount of pages deep the crawl should go
+        :param max_browser_instances: The maximum amount of browser instances
+            that may be open at once
         """
 
         super(Crawler, self).__init__()
@@ -31,10 +38,11 @@ class Crawler(Thread):
         self.__results = queue.Queue()
 
         self.__website_list = website_list
-        self.__browser = Chrome()
+        self.__browser_pool = queue.Queue()
         self.__crawled_urls = []
         self.__found_image_urls = []
         self.__max_depth = max_depth
+        self.__browser_instance_cnt = max_browser_instances
 
 
     def run(self):
@@ -43,49 +51,92 @@ class Crawler(Thread):
         """
         self.__running = True
 
-        with closing(Chrome()) as self.__browser:
-            for url in self.__website_list:
-                self._crawl_page(url)
+        # Open up all browser windows
+        for i in range(self.__browser_instance_cnt):
+            browser = Chrome()
+            # Set the page timeout
+            browser.set_page_load_timeout(30)
+            self.__browser_pool.put(browser)
+
+        crawl_threads = []
+
+        # Starts crawling the page and returns the given browser to the pool
+        # when finished
+        def crawl_and_return_to_pool(url, browser):
+            self._crawl_page(url, browser)
+            self.__browser_pool.put(browser)
+
+        # Start crawling each URL
+        for url in self.__website_list:
+            if self.__running:
+                # Wait for an unused browser instance
+                browser = self.__browser_pool.get()
+                # Start crawling
+                thread = Thread(target = crawl_and_return_to_pool, args = (url, browser))
+                thread.start()
+                crawl_threads.append(thread)
+
+        # Wait for crawling to finish
+        for thread in crawl_threads:
+            thread.join()
+
+        # Close all browser instances
+        for i in range(self.__browser_instance_cnt):
+            browser = self.__browser_pool.get()
+            browser.close()
 
         self.__running = False
 
 
-    def get_image_url(self):
-        """Blocks until a new image URL has been retrieved or the crawler has
-        finished running, in which case None is returned.
+    def get_image(self):
+        """Returns image data loaded from the crawler. Blocks until a new image
+        has been found or until the crawler has finished running, in which case
+        None is returned.
 
-        :return: An image URL or None if the crawler is finished
+        :return: Numpy array of image data or None
         """
 
         while self.__running:
             try:
-                return self.__results.get_nowait()
+                # Load image from URL and convert it to a Numpy array
+                url = self.__results.get_nowait()
+                image_data = urllib.urlopen(url).read()
+                return np.array(Image.open(BytesIO(image_data)))
             except queue.Empty:
+                # Try again
                 pass
 
         return None
 
 
-    def _crawl_page(self, url, depth=0):
+    def _crawl_page(self, url, browser, depth=0):
         """Crawls the given page for images and links to other webpages. Image
         URLs are put in the results queue. Links are followed and crawled.
 
         :param url: The URL of the page to crawl
+        :param browser: The browser instance to open the page on
         :param depth: The current crawling depth, starting at zero
         """
 
         if depth > self.__max_depth:
             return
         if not self.__running:
-            print("Aborted processing page " + url)
+            # Abort processing the page
             return
 
         self.__crawled_urls.append(url)
 
+        image_urls = []
+        link_urls = []
+
         # Load up the page
-        self.__browser.get(url)
-        image_urls = self._get_image_urls()
-        link_urls = self._get_link_urls()
+        try:
+            browser.get(url)
+            image_urls = self._get_image_urls(browser)
+            link_urls = self._get_link_urls(browser)
+        except TimeoutException:
+            # TODO(velovix): Add support for partially loaded pages
+            print("Warning: page " + url + " timed out")
 
         # Emit the URLs of all unique images in the page
         for image_url in image_urls:
@@ -96,16 +147,17 @@ class Crawler(Thread):
         # Follow links to unique URLs that have the same domain as the parent
         for link_url in link_urls:
             if not link_url in self.__crawled_urls and _same_domain(url, link_url):
-                self._crawl_page(link_url, depth=depth+1)
+                self._crawl_page(link_url, browser, depth=depth+1)
 
 
-    def _get_image_urls(self):
+    def _get_image_urls(self, browser):
         """Returns the URLs of all images in the current page.
 
+        :param browser: The browser that the page is loaded on
         :return: list of image URLs
         """
 
-        images = self.__browser.find_elements_by_css_selector("img")
+        images = browser.find_elements_by_css_selector("img")
         urls = []
         for image in images:
             urls.append(image.get_attribute("src"))
@@ -113,13 +165,14 @@ class Crawler(Thread):
         return urls
 
 
-    def _get_link_urls(self):
+    def _get_link_urls(self, browser):
         """Returns the URLs of all links in the current page.
 
+        :param browser: The browser that the page is loaded on
         :return: list of link URLs
         """
 
-        links = self.__browser.find_elements_by_css_selector("a")
+        links = browser.find_elements_by_css_selector("a")
         urls = []
         for link in links:
             urls.append(link.get_attribute("href"))
