@@ -60,6 +60,7 @@ class MainWindow(QtWidgets.QDialog):
 
         # Start crawling in another thread
         self.crawler = Crawler(self.config.websites)
+        self.crawler.start()
 
     # QT Events
     def closeEvent(self, event):
