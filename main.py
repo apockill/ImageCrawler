@@ -4,6 +4,16 @@ from config import Config
 from PyQt5 import QtCore, QtWidgets, QtGui  # All GUI things
 from results_gui import ResultsList
 
+"""
+TODO: Add settings
+When "start scan" is pressed, self.crawler is constructed with the settings
+Settings button is disabled
+
+Initialization of crawler must catch FILENOTFOUNDERROR in case the chromedriver.exe is not in the same directory
+
+The first time you start scan, check to make sure there is > 1 websites in the website list
+"""
+
 
 class MainWindow(QtWidgets.QDialog):
 
@@ -11,10 +21,11 @@ class MainWindow(QtWidgets.QDialog):
         super().__init__()
 
         self.config = Config()
-        self.crawler = Crawler(self.config.websites)
+        self.crawler = None  # Initialized in self.start_scan
 
         # Init UI Globals
         self.scan_btn = QtWidgets.QPushButton("Start Search")
+        self.settings_btn = QtWidgets.QPushButton("Settings")
         self.progress_bar = QtWidgets.QProgressBar(self)
         self.results_lst = ResultsList(self)
 
@@ -51,6 +62,14 @@ class MainWindow(QtWidgets.QDialog):
         Disables button while scan is running
         :return:
         """
+
+        if len(self.config.websites) == 0:
+            QtWidgets.QMessageBox.question(self, 'Can Not Continue',
+                                               "You have not specified any URL's to scan. Try adding some!",
+                                               QtWidgets.QMessageBox.Ok)
+            return
+
+        self.crawler = Crawler(self.config.websites)
 
         # Disable the scan button
         self.scan_btn.setDisabled(True)
