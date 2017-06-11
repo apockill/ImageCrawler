@@ -1,16 +1,17 @@
 """Contains an implementation of a web crawler for finding image URLs.
 """
-
 from threading import Thread
-import queue
+from PIL import Image
 from urllib.parse import urlparse
 from contextlib import closing
-
-from PIL import Image
-import urllib
-import numpy as np
 from selenium.webdriver import Chrome
 from selenium.common.exceptions import TimeoutException
+
+import numpy as np
+import queue
+import urllib
+
+
 
 def _same_domain(url1, url2):
     """Returns true if the two domains have the same domain.
@@ -23,7 +24,7 @@ class Crawler(Thread):
     """A basic web crawler that looks for image URLs recursively.
     """
 
-    def __init__(self, website_list, max_depth=5, max_browser_instances=5):
+    def __init__(self, website_list, max_depth, max_browser_instances, load_timeout):
         """Creates a new web crawler.
 
         :param website_list: The list of web URLs to start crawling from
@@ -42,6 +43,7 @@ class Crawler(Thread):
         self.__crawled_urls = []
         self.__found_image_urls = []
         self.__max_depth = max_depth
+        self.__load_timeout = load_timeout
         self.__browser_instance_cnt = max_browser_instances
 
 
@@ -55,7 +57,7 @@ class Crawler(Thread):
         for i in range(self.__browser_instance_cnt):
             browser = Chrome()
             # Set the page timeout
-            browser.set_page_load_timeout(30)
+            browser.set_page_load_timeout(self.__load_timeout)
             self.__browser_pool.put(browser)
 
         crawl_threads = []
@@ -96,11 +98,11 @@ class Crawler(Thread):
         :return: Numpy array of image data or None
         """
 
-        while self.__running:
+        if self.__running:
             try:
                 # Load image from URL and convert it to a Numpy array
                 url = self.__results.get_nowait()
-                image_data = urllib.urlopen(url).read()
+                image_data = urllib.request.urlopen(url).read()
                 return np.array(Image.open(BytesIO(image_data)))
             except queue.Empty:
                 # Try again

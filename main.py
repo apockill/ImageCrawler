@@ -32,11 +32,13 @@ class MainWindow(QtWidgets.QDialog):
         self.progress_bar = QtWidgets.QProgressBar(self)
         self.results_lst = ResultsList(self)
 
+        # Create the timer for the scanner
+        self.scan_timer = QtCore.QTimer()
+        self.scan_check_time = 100  # How often to check for images in self.crawler
+
         # Initialize the UI
         self.init_UI()
 
-        # Create the timer for the scanner
-        self.scan_timer = QtCore.QTimer()
 
     def init_UI(self):
         # Set up buttons
@@ -65,7 +67,7 @@ class MainWindow(QtWidgets.QDialog):
         row1.addLayout(col2)
 
         self.setLayout(row1)
-        self.setWindowTitle('')
+        self.setWindowTitle('Image Crawler')
         self.show()
 
 
@@ -85,16 +87,20 @@ class MainWindow(QtWidgets.QDialog):
                                            QtWidgets.QMessageBox.Ok)
             return
 
-        self.crawler = Crawler(self.config.websites)
+        self.crawler = Crawler(self.config.websites,
+                               self.config.search_depth,
+                               self.config.max_browsers,
+                               self.config.browser_timeout)
 
         # Disable the scan button
         self.scan_btn.setDisabled(True)
-
-        # self.results_lst.add_item("www.amazon.com", "some image description")
+        self.settings_btn.setDisabled(True)
 
         # Start crawling in another thread
         self.crawler.start()
 
+        # Start analyzing in a while so the browsers have time to open
+        self.scan_timer.singleShot(1000, self.analyze_image)
 
     def open_settings(self):
         self.settings_btn.setDisabled(True)
@@ -179,7 +185,14 @@ class MainWindow(QtWidgets.QDialog):
     # Scan Logic
     def analyze_image(self):
         """ This will pull an image that has been found by the crawler and analyze it """
-        pass
+        img = self.crawler.get_image()
+        print("analyze")
+
+        self.scan_timer.singleShot(self.scan_check_time, self.analyze_image)
+
+    def add_match(self, image, url):
+        # TODO(Alex): This function
+        self.results_lst.add_item("www.amazon.com", "some image description")
 
     # QT Events
     def closeEvent(self, event):

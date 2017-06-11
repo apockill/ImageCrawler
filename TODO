@@ -2,13 +2,14 @@ Alex:
     -
 
 Tyler:
-    - Impliment scan depth, max open browsers, and URL load timeout settings for class initialization
-    -
+    - When crawler.get_image() is called, it should return the image, and the URL of the page that the image was embedded
+      into. This way on alex's end, the image
 
 
 
 
 ERROR:
+    - Occured when running 5 browsers, scan depth 3, timeout 60, and running it for about a minute or two
 
 C:\Python34\python.exe "C:/Users/Alex Thiel/Google Drive/Projects/Project - 2017 - Image Crawler Tool/ImageCrawler/main.py"
 Exception in thread Thread-5:
