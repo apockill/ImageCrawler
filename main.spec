@@ -1,9 +1,12 @@
 # -*- mode: python -*-
+import os
 
 block_cipher = None
 icon_dir = "Icons\\"
-icon_list = ["start_scan.png",
-             "settings.png"]
+icon_list = os.listdir(icon_dir)
+# ["start_scan.png",
+#  "settings.png",
+#  "add_template.png"]
 
 data = []
 for icon in icon_list:
@@ -20,6 +23,7 @@ a = Analysis(['main.py'],
              win_no_prefer_redirects=False,
              win_private_assemblies=False,
              cipher=block_cipher)
+
 pyz = PYZ(a.pure, a.zipped_data,
              cipher=block_cipher)
 exe = EXE(pyz,

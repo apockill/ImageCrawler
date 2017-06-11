@@ -131,11 +131,13 @@ class PlaneTracker(Tracker):
         if len(frame_points) < self.MIN_MATCH_COUNT:
             self._addToHistory(tracked)
             return
-        try:
-            matches = self.matcher.knnMatch(frame_descrs, k=2)
-        except Exception as e:
-            print("OPENCV ERROR!", e)
-            return
+        matches = self.matcher.knnMatch(frame_descrs, k=2)
+
+        # try:
+        #     matches = self.matcher.knnMatch(frame_descrs, k=2)
+        # except Exception as e:
+        #     print("OPENCV ERROR!", e)
+        #     return
 
         matches = [m[0] for m in matches if len(m) == 2 and m[0].distance < m[1].distance * 0.75]
 

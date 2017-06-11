@@ -1,10 +1,12 @@
-import sys
-import paths
-import cv2
 from crawler import Crawler
 from config import Config
 from PyQt5 import QtCore, QtWidgets, QtGui  # All GUI things
 from results_gui import ResultsList
+from compare_image import CompareImage
+import sys
+import paths
+import cv2
+
 
 """
 TODO
@@ -26,11 +28,14 @@ class MainWindow(QtWidgets.QDialog):
 
         self.config = Config()
         self.crawler = None  # Initialized in self.start_scan
+        self.comparer = CompareImage()
 
         # Init UI Globals
         self.scan_btn = QtWidgets.QPushButton("Start Search")
         self.settings_btn = QtWidgets.QPushButton("Settings")
+        self.template_btn = QtWidgets.QPushButton("Template")
         self.progress_bar = QtWidgets.QProgressBar(self)
+        self.scan_cnt_lbl = QtWidgets.QLabel("")
         self.results_lst = ResultsList(self)
 
         # Create the timer for the scanner
@@ -41,29 +46,36 @@ class MainWindow(QtWidgets.QDialog):
         # Initialize the UI
         self.init_UI()
 
-
-
-
     def init_UI(self):
+        self.progress_bar.setFixedWidth(350)
+
+
         # Set up buttons
         self.settings_btn.setIcon(QtGui.QIcon(paths.settings))
         self.scan_btn.setIcon(QtGui.QIcon(paths.start_scan))
+        self.template_btn.setIcon(QtGui.QIcon(paths.add_template))
 
         self.scan_btn.setToolTip("This will start searching the websites specified in the list of websites to search")
         self.settings_btn.setToolTip("This will open a settings window to configure your scan")
+        self.template_btn.setToolTip("This will add an image to search for in the images throughout the scan")
 
         self.scan_btn.clicked.connect(self.start_scan)
         self.settings_btn.clicked.connect(self.open_settings)
+        self.template_btn.clicked.connect(self.add_template)
 
         col2 = QtWidgets.QVBoxLayout()
         col2.addWidget(self.settings_btn)
+        col2.addWidget(self.template_btn)
         col2.addStretch(1)
         col2.addWidget(self.scan_btn)
 
+        col1row1 = QtWidgets.QHBoxLayout()
+        col1row1.addWidget(self.progress_bar)
+        col1row1.addWidget(self.scan_cnt_lbl)
 
         col1 = QtWidgets.QVBoxLayout()
         col1.addWidget(self.results_lst)
-        col1.addWidget(self.progress_bar)
+        col1.addLayout(col1row1)
 
 
         row1 = QtWidgets.QHBoxLayout()
@@ -88,6 +100,14 @@ class MainWindow(QtWidgets.QDialog):
         if len(self.config.websites) == 0:
             QtWidgets.QMessageBox.question(self, 'Can Not Continue',
                                            "You have not specified any URL's to scan. Try adding some!",
+                                           QtWidgets.QMessageBox.Ok)
+            return
+
+        # If no templates have been added to be tracked
+        if len(self.comparer.get_template()) == 0:
+            QtWidgets.QMessageBox.question(self, 'Can Not Continue',
+                                           "You have not added any template images for the scanner to search for. "
+                                           "Try adding some!",
                                            QtWidgets.QMessageBox.Ok)
             return
 
@@ -186,6 +206,20 @@ class MainWindow(QtWidgets.QDialog):
 
         self.settings_btn.setEnabled(True)
 
+    def add_template(self):
+        """ This happens when the Template button is pressed. It adds an image to the tracker to search for """
+
+        img_file = QtWidgets.QFileDialog.getOpenFileName(self,
+                                                    'Add Template Image',
+                                                    './',
+                                                    '*.png')[0]
+        # If the user pressed cancel
+        if img_file is None: return
+
+        # Add the image to the comparer
+        img = cv2.imread(img_file)
+        self.comparer.add_template(img)
+
 
     # Scan Logic
     def analyze_image(self):
@@ -199,16 +233,21 @@ class MainWindow(QtWidgets.QDialog):
             timer()
             return
 
-        # TODO: Delete
-        self.scanned_count += 1
-        cv2.imshow('frame', img)
-        cv2.waitKey(500)
 
+        if self.comparer.is_match(img):
+            print("GOT MATCH!", self.scanned_count)
+            cv2.imwrite("OUTPUT/" + str(self.scanned_count) + '.png', img)
+            cv2.waitKey(1)
+            self.add_match(img, "Image " + str(self.scanned_count), "URL GOES HERE")
+
+        # Finish up and set the timer again
+        self.scanned_count += 1
+        self.scan_cnt_lbl.setText("Tested: " + str(self.scanned_count))
         timer()
 
-    def add_match(self, image, url):
+    def add_match(self, image, id, url):
         # TODO(Alex): This function
-        self.results_lst.add_item("www.amazon.com", "some image description")
+        self.results_lst.add_item(image, id, url)
 
 
     # QT Events
@@ -220,12 +259,12 @@ class MainWindow(QtWidgets.QDialog):
 
 if __name__ == '__main__':
     # Install a global exception hook to catch pyQt errors that fall through (for debugging)
-    # sys.__excepthook = sys.excepthook
-    # sys._excepthook  = sys.excepthook
-    # def exception_hook(exctype, value, traceback):
-    #     sys._excepthook(exctype, value, traceback)
-    #     sys.exit(1)
-    # sys.excepthook   = exception_hook
+    sys.__excepthook = sys.excepthook
+    sys._excepthook  = sys.excepthook
+    def exception_hook(exctype, value, traceback):
+        sys._excepthook(exctype, value, traceback)
+        sys.exit(1)
+    sys.excepthook   = exception_hook
 
 
     # Create the Application base

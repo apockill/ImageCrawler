@@ -15,3 +15,4 @@ icon_dir = resourcePath("Icons")
 
 settings = os.path.join(icon_dir, "settings.png")
 start_scan = os.path.join(icon_dir, "start_scan.png")
+add_template = os.path.join(icon_dir, "add_template.png")

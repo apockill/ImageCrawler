@@ -11,13 +11,15 @@ class CompareImage:
 
     def __init__(self, features_detect=1500):
         self.tracker = PlaneTracker(0.025, 10, max_features_detect=1500)
+        self.__templates = []  # Keep track of templates being tracked
 
     def add_template(self, img):
         """
         This will add a template image to compare other images to. It will add the whole image,
         then many other smaller parts of the image, to try to capture more images.
         """
-        h, w, _ = img
+        h, w, _ = img.shape
+        self.__templates.append(img)
 
         # Track the whole image
         self.tracker.add_target(img, (0, 0, w, h))
@@ -40,7 +42,13 @@ class CompareImage:
                                       int(w * .5),
                                       int(h * .5)))
 
+    def get_template(self):
+        return self.__templates
 
     def is_match(self, img):
         """ This will compare the img to the images that are currently being compared"""
-        pass
+        self.tracker.track(img)
+        if len(self.tracker.trackedHistory[0]) == 0:
+            return False
+        return True
+

@@ -2,10 +2,10 @@
 This is supposed to be a pretty list of things that have been found in the web crawling so far
 """
 from PyQt5 import QtCore, QtWidgets, QtGui
-
+from image_utils import resize_to_max, cv_to_qt
 
 class ResultWidget(QtWidgets.QWidget):
-    def __init__(self, parent, website, image):
+    def __init__(self, parent, image, title, url):
         super(ResultWidget, self).__init__(parent)
 
         # Set up Globals
@@ -13,29 +13,27 @@ class ResultWidget(QtWidgets.QWidget):
         self.margins = None  # Is set after initUI creates it's first layout
 
         # Set up UI Globals
-        self.title       = QtWidgets.QLabel(website)
-        self.description = QtWidgets.QLabel(image)
-       #  self.icon        = QtWidgets.QLabel()
+        self.title       = QtWidgets.QLabel(title)
+        self.description = QtWidgets.QLabel(url)
+        self.icon        = QtWidgets.QLabel()
 
         self.initUI()
-
+        self.setIcon(image)
 
     def initUI(self):
-
-
         bold = QtGui.QFont()
         bold.setBold(True)
         self.title.setFont(bold)
 
 
         midLayout = QtWidgets.QVBoxLayout()
-        # midLayout.setSpacing(1)
+        midLayout.setSpacing(1)
         midLayout.addWidget(self.title)
         midLayout.addWidget(self.description)
 
 
         mainHLayout = QtWidgets.QHBoxLayout()
-        # mainHLayout.addWidget(self.icon)
+        mainHLayout.addWidget(self.icon)
         mainHLayout.addLayout(midLayout, QtCore.Qt.AlignLeft)
 
         mainHLayout.setSizeConstraint(QtWidgets.QLayout.SetFixedSize)
@@ -44,9 +42,10 @@ class ResultWidget(QtWidgets.QWidget):
         # self.setSizeHint(self.sizeHint())
         # self.setSize
 
-    def setIcon(self, icon):
-        self.icon.setPixmap(QtGui.QPixmap(icon))
-
+    def setIcon(self, img_cv):
+        img_cv = resize_to_max(img_cv, 32, 32)
+        q_img = cv_to_qt(img_cv)
+        self.icon.setPixmap(QtGui.QPixmap(q_img))
 
 
 class ResultsList(QtWidgets.QListWidget):
@@ -62,7 +61,7 @@ class ResultsList(QtWidgets.QListWidget):
         self.setMinimumWidth(self.MINIMUM_WIDTH)
 
 
-    def add_item(self, website, image, index=None):
+    def add_item(self, image, title, url, index=None):
         """
 
         :param commandType: The command that will be generated
@@ -72,7 +71,7 @@ class ResultsList(QtWidgets.QListWidget):
         """
 
         # Create the widget to be placed inside the listWidgetItem
-        newWidget = ResultWidget(self, website, image)
+        newWidget = ResultWidget(self, image, title, url)
 
 
         # Create the list widget item
