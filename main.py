@@ -1,5 +1,5 @@
 import sys
-import Paths
+import paths
 from crawler import Crawler
 from config import Config
 from PyQt5 import QtCore, QtWidgets, QtGui  # All GUI things
@@ -14,6 +14,7 @@ Initialization of crawler must catch FILENOTFOUNDERROR in case the chromedriver.
 Settings:
     Maximum amount of browser instances
     Maximum depth of search
+    Timeout for a URL before giving up and trying a new one
 """
 
 
@@ -34,10 +35,13 @@ class MainWindow(QtWidgets.QDialog):
         # Initialize the UI
         self.init_UI()
 
+        # Create the timer for the scanner
+        self.scan_timer = QtCore.QTimer()
+
     def init_UI(self):
         # Set up buttons
-        self.settings_btn.setIcon(QtGui.QIcon(Paths.settings))
-        self.scan_btn.setIcon(QtGui.QIcon(Paths.start_scan))
+        self.settings_btn.setIcon(QtGui.QIcon(paths.settings))
+        self.scan_btn.setIcon(QtGui.QIcon(paths.start_scan))
 
         self.scan_btn.setToolTip("This will start searching the websites specified in the list of websites to search")
         self.settings_btn.setToolTip("This will open a settings window to configure your scan")
@@ -127,24 +131,28 @@ class MainWindow(QtWidgets.QDialog):
         # Set the main layout and general window parameters
         window.setLayout(window.mainVLayout)
         window.setWindowTitle("Scan Settings")
-        window.setWindowIcon(QtGui.QIcon(Paths.settings))
+        window.setWindowIcon(QtGui.QIcon(paths.settings))
 
         # Dress the base window (this is where the child actually puts the content into the widget)
         descLbl = QtWidgets.QLabel("Customize Your Scan")
 
         depth_lbl = QtWidgets.QLabel("Scan Depth")
         brwsr_lbl = QtWidgets.QLabel("Maximum Open Browsers")
+        timeout_lbl = QtWidgets.QLabel("URL Load Timeout (s)")
 
-        window.depth_chk = QtWidgets.QLineEdit()
-        window.brwsr_chk = QtWidgets.QLineEdit()  # Show prints from robot class
+        window.depth_txt = QtWidgets.QLineEdit()
+        window.brwsr_txt = QtWidgets.QLineEdit()  # Show prints from robot class
+        window.timeout_txt = QtWidgets.QLineEdit()  # Show prints from robot class
 
-        #
-        window.depth_chk.setText(str(self.config.search_depth))
-        window.brwsr_chk.setText(str(self.config.max_browsers))
+        # Recover previous settings
+        window.depth_txt.setText(str(self.config.search_depth))
+        window.brwsr_txt.setText(str(self.config.max_browsers))
+        window.timeout_txt.setText(str(self.config.browser_timeout))
 
         window.content.addWidget(descLbl)
-        addRow(depth_lbl, window.depth_chk)
-        addRow(brwsr_lbl, window.brwsr_chk)
+        addRow(depth_lbl, window.depth_txt)
+        addRow(brwsr_lbl, window.brwsr_txt)
+        addRow(timeout_lbl, window.timeout_txt)
 
         window.mainVLayout.addLayout(buttonRow)  # Add button after, so hints appear above buttons
 
@@ -152,8 +160,15 @@ class MainWindow(QtWidgets.QDialog):
         accepted = window.exec_()
 
         if accepted:
-            self.config.search_depth = window.depth_chk.text()
-            self.config.max_browsers = window.brwsr_chk.text()
+            try: self.config.search_depth = int(window.depth_txt.text())
+            except ValueError: pass
+
+            try: self.config.max_browsers = int(window.brwsr_txt.text())
+            except ValueError: pass
+
+            try: self.config.browser_timeout = int(window.timeout_txt.text())
+            except ValueError: pass
+
 
         # Make sure QT properly handles the memory after this function ends
         window.close()
@@ -161,10 +176,16 @@ class MainWindow(QtWidgets.QDialog):
 
         self.settings_btn.setEnabled(True)
 
+    # Scan Logic
+    def analyze_image(self):
+        """ This will pull an image that has been found by the crawler and analyze it """
+        pass
 
     # QT Events
     def closeEvent(self, event):
-        self.crawler.close()
+        # If there is an ongoing crawling session, close it
+        if self.crawler is not None:
+            self.crawler.close()
 
 
 if __name__ == '__main__':
