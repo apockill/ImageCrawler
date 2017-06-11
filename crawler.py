@@ -181,6 +181,7 @@ class Crawler(Thread):
 
         return urls
 
+
     def _url_to_image(self, url):
         """ Download the image, convert it to a NumPy array, and then read it into OpenCV format"""
         # image_data = urllib.request.urlopen(url).read()
