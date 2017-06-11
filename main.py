@@ -1,5 +1,6 @@
 import sys
 import paths
+import cv2
 from crawler import Crawler
 from config import Config
 from PyQt5 import QtCore, QtWidgets, QtGui  # All GUI things
@@ -35,9 +36,12 @@ class MainWindow(QtWidgets.QDialog):
         # Create the timer for the scanner
         self.scan_timer = QtCore.QTimer()
         self.scan_check_time = 100  # How often to check for images in self.crawler
+        self.scanned_count = 0  # How many images have been scanned
 
         # Initialize the UI
         self.init_UI()
+
+
 
 
     def init_UI(self):
@@ -182,17 +186,30 @@ class MainWindow(QtWidgets.QDialog):
 
         self.settings_btn.setEnabled(True)
 
+
     # Scan Logic
     def analyze_image(self):
         """ This will pull an image that has been found by the crawler and analyze it """
-        img = self.crawler.get_image()
-        print("analyze")
+        timer = lambda: self.scan_timer.singleShot(self.scan_check_time, self.analyze_image)
 
-        self.scan_timer.singleShot(self.scan_check_time, self.analyze_image)
+        img = self.crawler.get_image()
+
+        # If no image is in the queue, ignore
+        if img is None:
+            timer()
+            return
+
+        # TODO: Delete
+        self.scanned_count += 1
+        cv2.imshow('frame', img)
+        cv2.waitKey(500)
+
+        timer()
 
     def add_match(self, image, url):
         # TODO(Alex): This function
         self.results_lst.add_item("www.amazon.com", "some image description")
+
 
     # QT Events
     def closeEvent(self, event):
@@ -203,12 +220,12 @@ class MainWindow(QtWidgets.QDialog):
 
 if __name__ == '__main__':
     # Install a global exception hook to catch pyQt errors that fall through (for debugging)
-    sys.__excepthook = sys.excepthook
-    sys._excepthook  = sys.excepthook
-    def exception_hook(exctype, value, traceback):
-        sys._excepthook(exctype, value, traceback)
-        sys.exit(1)
-    sys.excepthook   = exception_hook
+    # sys.__excepthook = sys.excepthook
+    # sys._excepthook  = sys.excepthook
+    # def exception_hook(exctype, value, traceback):
+    #     sys._excepthook(exctype, value, traceback)
+    #     sys.exit(1)
+    # sys.excepthook   = exception_hook
 
 
     # Create the Application base

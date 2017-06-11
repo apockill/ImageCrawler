@@ -6,7 +6,8 @@ from urllib.parse import urlparse
 from contextlib import closing
 from selenium.webdriver import Chrome
 from selenium.common.exceptions import TimeoutException
-
+import io
+import cv2
 import numpy as np
 import queue
 import urllib
@@ -102,8 +103,7 @@ class Crawler(Thread):
             try:
                 # Load image from URL and convert it to a Numpy array
                 url = self.__results.get_nowait()
-                image_data = urllib.request.urlopen(url).read()
-                return np.array(Image.open(BytesIO(image_data)))
+                return self._url_to_image(url)
             except queue.Empty:
                 # Try again
                 pass
@@ -181,6 +181,16 @@ class Crawler(Thread):
 
         return urls
 
+    def _url_to_image(self, url):
+        """ Download the image, convert it to a NumPy array, and then read it into OpenCV format"""
+        # image_data = urllib.request.urlopen(url).read()
+        # return np.array(Image.open(io.BytesIO(image_data)))
+
+        resp = urllib.request.urlopen(url)
+        image = np.asarray(bytearray(resp.read()), dtype="uint8")
+        image = cv2.imdecode(image, cv2.IMREAD_COLOR)
+
+        return image
 
     def close(self):
         """Prematurely stops crawling pages.

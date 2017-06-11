@@ -4,7 +4,9 @@ Alex:
 Tyler:
     - When crawler.get_image() is called, it should return the image, and the URL of the page that the image was embedded
       into. This way on alex's end, the image
-
+    - Add some kind of crawler.progress that returns a number between 0 and 100, reflecting a guesstimate of the progress
+      Doesn't have to be too accurate.
+    -
 
 
 

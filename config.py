@@ -1,5 +1,6 @@
-import json
 from threading import RLock
+import json
+
 
 
 class Config:
