@@ -24,31 +24,39 @@ class CompareImage:
         # Track the whole image
         self.tracker.add_target(img, (0, 0, w, h))
 
-        # Track the center quarter of the image
-        self.tracker.add_target(img, (int(w * .25),
-                                      int(h * .25),
-                                      int(w * .75),
-                                      int(h * .75)))
-
-        # Track the right half of the image
-        self.tracker.add_target(img, (int(w * .5),
-                                      int(h * .5),
-                                      int(w * 1),
-                                      int(h * 1)))
-
-        # Track the left half of the image
-        self.tracker.add_target(img, (int(w * 0),
-                                      int(h * 0),
-                                      int(w * .5),
-                                      int(h * .5)))
+        # # Track the center quarter of the image
+        # self.tracker.add_target(img, (int(w * .25),
+        #                               int(h * .25),
+        #                               int(w * .75),
+        #                               int(h * .75)))
+        #
+        # # Track the right half of the image
+        # self.tracker.add_target(img, (int(w * .5),
+        #                               int(h * .5),
+        #                               int(w * 1),
+        #                               int(h * 1)))
+        #
+        # # Track the left half of the image
+        # self.tracker.add_target(img, (int(w * 0),
+        #                               int(h * 0),
+        #                               int(w * .5),
+        #                               int(h * .5)))
 
     def get_template(self):
         return self.__templates
 
-    def is_match(self, img):
+    def is_match(self, img, min_match_ratio):
         """ This will compare the img to the images that are currently being compared"""
         self.tracker.track(img)
-        if len(self.tracker.trackedHistory[0]) == 0:
-            return False
-        return True
+
+        for tracked in self.tracker.history[0]:
+            if tracked.match_ratio >= min_match_ratio:
+                return True
+            else:
+                print("IGNORING! ", tracked.match_ratio)
+
+        return False
+        # # TODO: Iterate through the tracked items to see if at least 1 is the necessary match_ratio, else False
+        # print("Percent_match", self.tracker.trackedHistory[0][0].match_ratio)
+        # return True
 

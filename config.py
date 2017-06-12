@@ -13,7 +13,8 @@ class Config:
 
     DEFAULT_SETTINGS = {"search_depth": 3,
                         "max_browsers": 5,
-                        "browser_timeout": 60}
+                        "browser_timeout": 60,
+                        "min_match_percent": 30}
 
     def __init__(self):
         self.lock = RLock()
@@ -80,6 +81,16 @@ class Config:
     @browser_timeout.setter
     def browser_timeout(self, value):
         self.__save_to_settings("browser_timeout", value)
+
+
+    @property
+    def min_match_percent(self):
+        return self.__load_from_settings("min_match_percent")
+
+    @min_match_percent.setter
+    def min_match_percent(self, value):
+        self.__save_to_settings("min_match_percent", value)
+
 
     # Helper Functions
     def __save_to_settings(self, key, val):
