@@ -60,6 +60,9 @@ class Crawler(Thread):
 
         # Open up all browser windows
         for i in range(self.__browser_instance_cnt):
+            if not self.__running:
+                break # End prematurely
+
             browser = Chrome()
             # Set the page timeout
             browser.set_page_load_timeout(self.__load_timeout)
@@ -77,13 +80,15 @@ class Crawler(Thread):
 
         # Start crawling each URL
         for url in self.__website_list:
-            if self.__running:
-                # Wait for an unused browser instance
-                browser = self.__browser_pool.get()
-                # Start crawling
-                thread = Thread(target = crawl_and_return_to_pool, args = (url, browser))
-                thread.start()
-                crawl_threads.append(thread)
+            if not self.__running:
+                break # End prematurely
+
+            # Wait for an unused browser instance
+            browser = self.__browser_pool.get()
+            # Start crawling
+            thread = Thread(target = crawl_and_return_to_pool, args = (url, browser))
+            thread.start()
+            crawl_threads.append(thread)
 
         # Wait for crawling to finish
         for thread in crawl_threads:
