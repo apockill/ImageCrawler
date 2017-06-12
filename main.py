@@ -236,7 +236,7 @@ class MainWindow(QtWidgets.QDialog):
         """ This will pull an image that has been found by the crawler and analyze it """
         timer = lambda: self.scan_timer.singleShot(self.scan_check_time, self.analyze_image)
 
-        img = self.crawler.get_image()
+        url, img = self.crawler.get_image()
 
         # If no image is in the queue, ignore
         if img is None:
@@ -248,7 +248,7 @@ class MainWindow(QtWidgets.QDialog):
             print("GOT MATCH!", self.scanned_count)
             cv2.imwrite("OUTPUT/" + str(self.scanned_count) + '.png', img)
             cv2.waitKey(1)
-            self.add_match(img, "Image " + str(self.scanned_count), "URL GOES HERE")
+            self.add_match(img, "Image " + str(self.scanned_count), url)
 
         # Finish up and set the timer again
         self.scanned_count += 1

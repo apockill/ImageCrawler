@@ -109,7 +109,7 @@ class Crawler(Thread):
                 # Try again
                 pass
 
-        return None
+        return None, None
 
 
     def _crawl_page(self, url, browser, depth=0):
