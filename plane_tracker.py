@@ -13,7 +13,7 @@ class Tracker:
     def __init__(self, historyLength):
         self.historyLen = historyLength
         self.targets = []
-        self.trackedHistory = [[] for i in range(self.historyLen)]
+        self.history = [[] for i in range(self.historyLen)]
 
         self.fFnt = cv2.FONT_HERSHEY_PLAIN  # Font for filter functions
         self.fColor = (255, 255, 255)  # Default color for filter functions
@@ -22,13 +22,13 @@ class Tracker:
     def _addToHistory(self, trackedArray):
         # Add an array of detected objects to the self.trackedHistory array, and shorten the trackedHistory array
         # so that it always remains self.historyLength long
-        self.trackedHistory.insert(0, trackedArray)
+        self.history.insert(0, trackedArray)
 
-        while len(self.trackedHistory) > self.historyLen:
-            del self.trackedHistory[-1]
+        while len(self.history) > self.historyLen:
+            del self.history[-1]
 
     def clear(self):
-        self.trackedHistory = [[] for i in range(self.historyLen)]
+        self.history = [[] for i in range(self.historyLen)]
         self.targets = []
 
 
@@ -56,7 +56,8 @@ class PlaneTracker(Tracker):
 
     # target: the "sample" object of the tracked object. Center: [x,y,z] Rotation[xr, yr, zr], ptCount: matched pts
     TrackedPlane = namedtuple('TrackedPlane', ['view', 'target', 'quad', 'ptCount',
-                                               'center', 'rotation', 'p0', 'p1', 'H'])
+                                               'center', 'rotation', 'p0', 'p1', 'H',
+                                               'match_ratio'])
 
     # Tracker parameters
     FLANN_INDEX_KDTREE = 1
@@ -179,9 +180,10 @@ class PlaneTracker(Tracker):
                                       view=target.view,
                                       quad=quad,
                                       ptCount=len(matches),
+                                      match_ratio=len(matches) / len(target.keypoints),
                                       center=center,
                                       rotation=rotation,
-                                      p0=p0, p1=p1, H=H, )
+                                      p0=p0, p1=p1, H=H)
             tracked.append(track)
 
         tracked.sort(key=lambda t: len(t.p0), reverse=True)
@@ -200,7 +202,7 @@ class PlaneTracker(Tracker):
     def draw_tracked(self, frame):
 
         # Sort the objects from lowest (z) to highest Z, so that they can be drawn one on top of the other
-        drawObjects = self.trackedHistory[0]
+        drawObjects = self.history[0]
         drawObjects = sorted(drawObjects, key=lambda obj: obj.center[2], reverse=True)
 
         mask = np.zeros_like(frame)

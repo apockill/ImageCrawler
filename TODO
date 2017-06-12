@@ -1,11 +1,9 @@
 Alex:
-    - Add image comparing
-    - Test template system thoroughly
-    - Remember last used templates (?)
     - Save a log that contains the images found, where they were found, and save the images to some log file w/ timestamp
-    - Add the images to the QListWidget as they're found, resized and made to look pretty
     - Figure out why sometimes openCV throws an error...
-    
+    - Add Websites list to GUI
+    - End Scan button?
+
 Tyler:
     - When crawler.get_image() is called, it should return the image, and the URL of the page that the image was embedded
       into. This way on alex's end, the image

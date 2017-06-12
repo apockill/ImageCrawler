@@ -119,6 +119,7 @@ class MainWindow(QtWidgets.QDialog):
         # Disable the scan button
         self.scan_btn.setDisabled(True)
         self.settings_btn.setDisabled(True)
+        self.template_btn.setDisabled(True)
 
         # Start crawling in another thread
         self.crawler.start()
@@ -164,25 +165,33 @@ class MainWindow(QtWidgets.QDialog):
         window.setWindowIcon(QtGui.QIcon(paths.settings))
 
         # Dress the base window (this is where the child actually puts the content into the widget)
-        descLbl = QtWidgets.QLabel("Customize Your Scan")
+        desc_lbl = QtWidgets.QLabel("Customize Your Scan")
 
         depth_lbl = QtWidgets.QLabel("Scan Depth")
         brwsr_lbl = QtWidgets.QLabel("Maximum Open Browsers")
         timeout_lbl = QtWidgets.QLabel("URL Load Timeout (s)")
+        ratio_lbl = QtWidgets.QLabel("Min Percent Match")
 
         window.depth_txt = QtWidgets.QLineEdit()
         window.brwsr_txt = QtWidgets.QLineEdit()  # Show prints from robot class
         window.timeout_txt = QtWidgets.QLineEdit()  # Show prints from robot class
+        window.ratio_sldr = QtWidgets.QSlider()
+
+        # Any setup that's necessary
+        window.ratio_sldr.setRange(0, 95)
+        window.ratio_sldr.setOrientation(QtCore.Qt.Horizontal)
 
         # Recover previous settings
         window.depth_txt.setText(str(self.config.search_depth))
         window.brwsr_txt.setText(str(self.config.max_browsers))
         window.timeout_txt.setText(str(self.config.browser_timeout))
+        window.ratio_sldr.setValue(self.config.min_match_percent)
 
-        window.content.addWidget(descLbl)
+        window.content.addWidget(desc_lbl)
         addRow(depth_lbl, window.depth_txt)
         addRow(brwsr_lbl, window.brwsr_txt)
         addRow(timeout_lbl, window.timeout_txt)
+        addRow(ratio_lbl, window.ratio_sldr)
 
         window.mainVLayout.addLayout(buttonRow)  # Add button after, so hints appear above buttons
 
@@ -199,6 +208,7 @@ class MainWindow(QtWidgets.QDialog):
             try: self.config.browser_timeout = int(window.timeout_txt.text())
             except ValueError: pass
 
+            self.config.min_match_percent = window.ratio_sldr.value()
 
         # Make sure QT properly handles the memory after this function ends
         window.close()
@@ -210,9 +220,9 @@ class MainWindow(QtWidgets.QDialog):
         """ This happens when the Template button is pressed. It adds an image to the tracker to search for """
 
         img_file = QtWidgets.QFileDialog.getOpenFileName(self,
-                                                    'Add Template Image',
-                                                    './',
-                                                    '*.png')[0]
+                                                    'Add Template Image',  # Window title
+                                                    './',  # Directory
+                                                    '*.png')[0]  # File type
         # If the user pressed cancel
         if img_file is None: return
 
@@ -234,7 +244,7 @@ class MainWindow(QtWidgets.QDialog):
             return
 
 
-        if self.comparer.is_match(img):
+        if self.comparer.is_match(img, self.config.min_match_percent / 100.0):
             print("GOT MATCH!", self.scanned_count)
             cv2.imwrite("OUTPUT/" + str(self.scanned_count) + '.png', img)
             cv2.waitKey(1)
@@ -246,7 +256,7 @@ class MainWindow(QtWidgets.QDialog):
         timer()
 
     def add_match(self, image, id, url):
-        # TODO(Alex): This function
+        # TODO(Alex): Add something to a file log here
         self.results_lst.add_item(image, id, url)
 
 
