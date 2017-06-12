@@ -64,8 +64,6 @@ class Crawler(Thread):
             # Set the page timeout
             browser.set_page_load_timeout(self.__load_timeout)
             self.__browser_pool.put(browser)
-            # Update the progress
-            self.progress += (1 / len(self.__website_list)) * 100
 
         crawl_threads = []
 
@@ -74,6 +72,8 @@ class Crawler(Thread):
         def crawl_and_return_to_pool(url, browser):
             self._crawl_page(url, browser)
             self.__browser_pool.put(browser)
+            # Update the progress
+            self.progress += (1 / len(self.__website_list)) * 100
 
         # Start crawling each URL
         for url in self.__website_list:
