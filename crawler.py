@@ -115,7 +115,10 @@ class Crawler(Thread):
             try:
                 # Load image from URL and convert it to a Numpy array
                 (url, page_url) = self.__results.get_nowait()
-                return (self._url_to_image(url), page_url)
+                image = self._url_to_image(url)
+                if image is None:
+                    return None, None
+                return self._url_to_image(url), page_url
             except queue.Empty:
                 # Try again
                 pass
@@ -201,9 +204,11 @@ class Crawler(Thread):
 
         resp = urllib.request.urlopen(url)
         image = np.asarray(bytearray(resp.read()), dtype="uint8")
-        image = cv2.imdecode(image, cv2.IMREAD_COLOR)
-
-        return image
+        if len(image):
+            image = cv2.imdecode(image, cv2.IMREAD_COLOR)
+            return image
+        else:
+            return None
 
     def close(self):
         """Prematurely stops crawling pages.
