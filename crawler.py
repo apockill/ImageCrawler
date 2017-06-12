@@ -36,6 +36,10 @@ class Crawler(Thread):
 
         super(Crawler, self).__init__()
 
+        self.progress = 0
+        """A value from 0 to 100 showing how complete the crawl is.
+        """
+
         self.__running = False
         self.__results = queue.Queue()
 
@@ -60,6 +64,8 @@ class Crawler(Thread):
             # Set the page timeout
             browser.set_page_load_timeout(self.__load_timeout)
             self.__browser_pool.put(browser)
+            # Update the progress
+            self.progress += (1 / len(self.__website_list)) * 100
 
         crawl_threads = []
 
