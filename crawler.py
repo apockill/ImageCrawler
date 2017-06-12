@@ -96,14 +96,15 @@ class Crawler(Thread):
         has been found or until the crawler has finished running, in which case
         None is returned.
 
-        :return: A tuple with image as a Numpy array and the URL, or None
+        :return: A tuple with image as a Numpy array and the URL of the page it
+        came from, or None
         """
 
         if self.__running:
             try:
                 # Load image from URL and convert it to a Numpy array
-                url = self.__results.get_nowait()
-                return (self._url_to_image(url), url)
+                (url, page_url) = self.__results.get_nowait()
+                return (self._url_to_image(url), page_url)
             except queue.Empty:
                 # Try again
                 pass
@@ -143,7 +144,7 @@ class Crawler(Thread):
         # Emit the URLs of all unique images in the page
         for image_url in image_urls:
             if not image_url in self.__found_image_urls:
-                self.__results.put(image_url)
+                self.__results.put((image_url, url))
                 self.__found_image_urls.append(image_url)
 
         # Follow links to unique URLs that have the same domain as the parent
