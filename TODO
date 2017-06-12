@@ -1,5 +1,6 @@
 Alex:
-    - Save a log that contains the images found, where they were found, and save the images to some log file w/ timestamp
+    - Save a log that contains a plaintext list of where images were found, so James can run it through Stillio.com to
+      get the full screenshots
     - Figure out why sometimes openCV throws an error...
     - Add Websites list to GUI
     - End Scan button?
