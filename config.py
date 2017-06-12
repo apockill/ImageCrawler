@@ -8,7 +8,7 @@ class Config:
     A threading-proof class for accessing config files and settings
     """
 
-    WEBSITES_FILE = "Websites.txt"
+    WEBSITES_FILE = "Scan_Websites.txt"
     SETTINGS_FILE = "Settings.json"
 
     DEFAULT_SETTINGS = {"search_depth": 3,
