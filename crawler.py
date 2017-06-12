@@ -96,14 +96,14 @@ class Crawler(Thread):
         has been found or until the crawler has finished running, in which case
         None is returned.
 
-        :return: Numpy array of image data or None
+        :return: A tuple with image as a Numpy array and the URL, or None
         """
 
         if self.__running:
             try:
                 # Load image from URL and convert it to a Numpy array
                 url = self.__results.get_nowait()
-                return self._url_to_image(url)
+                return (self._url_to_image(url), url)
             except queue.Empty:
                 # Try again
                 pass
