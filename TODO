@@ -13,9 +13,6 @@ Tyler:
     - Could you make an icon (.ico) so the program can have a cool-guy executable? :D
     - Check out the bug below?
 
-ERROR 3 (Alex):
-cv2.error: C:\OpenCV3\Sources\modules\imgcodecs\src\loadsave.cpp:490: error: (-215) !buf.empty() && buf.isContinuous() in function cv::imdecode_
-    - Hold off until error 1 is solved, maybe won't be a problem anymore (?)
 
 ERROR 2 (Tyler):
 OSError: [WinError 10048] Only one usage of each socket address (protocol/network address/port) is normally permitted
