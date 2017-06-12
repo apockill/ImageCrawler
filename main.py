@@ -125,7 +125,7 @@ class MainWindow(QtWidgets.QDialog):
         self.crawler.start()
 
         # Start analyzing in a while so the browsers have time to open
-        self.scan_timer.singleShot(1000, self.analyze_image)
+        self.scan_timer.singleShot(1000, self.check_crawler)
 
     def open_settings(self):
         self.settings_btn.setDisabled(True)
@@ -232,17 +232,16 @@ class MainWindow(QtWidgets.QDialog):
 
 
     # Scan Logic
-    def analyze_image(self):
+    def check_crawler(self):
         """ This will pull an image that has been found by the crawler and analyze it """
-        timer = lambda: self.scan_timer.singleShot(self.scan_check_time, self.analyze_image)
-
-        url, img = self.crawler.get_image()
+        timer = lambda: self.scan_timer.singleShot(self.scan_check_time, self.check_crawler)
+        self.progress_bar.setValue(self.crawler.progress)
+        img, url = self.crawler.get_image()
 
         # If no image is in the queue, ignore
         if img is None:
             timer()
             return
-
 
         if self.comparer.is_match(img, self.config.min_match_percent / 100.0):
             print("GOT MATCH!", self.scanned_count)
