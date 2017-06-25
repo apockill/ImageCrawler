@@ -18,4 +18,8 @@ start_scan = os.path.join(icon_dir, "start_scan.png")
 add_template = os.path.join(icon_dir, "add_template.png")
 websites = os.path.join(icon_dir, "websites.png")
 
-driver = os.path.join(resource_path(resources_loc), "phantomjs.exe")
+driver = None
+if 'PHANTOMJS_LOCATION' in os.environ:
+    driver = os.environ['PHANTOMJS_LOCATION']
+else:
+    driver = os.path.join(resource_path(resources_loc), "phantomjs.exe")

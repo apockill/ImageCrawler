@@ -4,7 +4,9 @@ from urllib.parse import urlparse
 from urllib.error import URLError
 from selenium.webdriver import PhantomJS as Driver
 from selenium.common.exceptions import TimeoutException, StaleElementReferenceException, WebDriverException
-from threading import Thread
+from threading import Thread, Timer
+from http.client import RemoteDisconnected
+from urllib.error import URLError
 import paths
 import cv2
 import numpy as np
@@ -48,6 +50,8 @@ class Crawler(Thread):
         self.__max_depth = max_depth
         self.__load_timeout = load_timeout
         self.__browser_instance_cnt = max_browser_instances
+        self.__scraped_page_cnt = 0
+        self.__is_finished = False
 
 
     def run(self):
@@ -72,10 +76,9 @@ class Crawler(Thread):
         # Starts crawling the page and returns the given browser to the pool
         # when finished
         def crawl_and_return_to_pool(url, browser):
-            self._crawl_page(url, browser)
+            progress_weight = (1 / len(self.__website_list)) * 100
+            self._crawl_page(url, browser, progress_weight)
             self.__browser_pool.put(browser)
-            # Update the progress
-            self.progress += (1 / len(self.__website_list)) * 100
 
         # Start crawling each URL
         for url in self.__website_list:
@@ -96,9 +99,13 @@ class Crawler(Thread):
         # Close all browser instances
         for i in range(self.__browser_instance_cnt):
             browser = self.__browser_pool.get()
-            browser.close()
+            try:
+                browser.close()
+            except Exception as e:
+                print("Warning: failed to close browser:", e)
 
         self.__running = False
+        self.__is_finished = True
 
 
     def get_image(self):
@@ -124,17 +131,31 @@ class Crawler(Thread):
 
         return None, None
 
+    def get_scraped_page_cnt(self):
+        """Returns the amount of scraped pages so far.
+        :return: Number of scraped pages
+        """
+        return self.__scraped_page_cnt
 
-    def _crawl_page(self, url, browser, depth=0):
+    def is_finished(self):
+        """Returns true if the scraping job is finished.
+        :return: True if scraping is finished
+        """
+        return self.__is_finished
+
+    def _crawl_page(self, url, browser, progress_step, depth=0):
         """Crawls the given page for images and links to other webpages. Image
         URLs are put in the results queue. Links are followed and crawled.
 
         :param url: The URL of the page to crawl
         :param browser: The browser instance to open the page on
+        :param progress_step: The amount to increment progress after this step
+        is finished
         :param depth: The current crawling depth, starting at zero
         """
 
         if depth > self.__max_depth:
+            self.progress += progress_step
             return
         if not self.__running:
             # Abort processing the page
@@ -151,20 +172,29 @@ class Crawler(Thread):
 
             image_urls = self._get_image_urls(browser)
             link_urls = self._get_link_urls(browser)
+
+            # Emit the URLs of all unique images in the page
+            for image_url in image_urls:
+                if image_url not in self.__found_image_urls:
+                    self.__results.put((image_url, url))
+                    self.__found_image_urls.append(image_url)
+
+            # Follow links to unique URLs that have the same domain as the parent
+            for link_url in link_urls:
+                if link_url not in self.__crawled_urls and _same_domain(url, link_url):
+                    # Split up the parent's progress step value by the value of a
+                    # single link
+                    next_progress_step = (1 / len(link_urls)) * progress_step
+                    self._crawl_page(link_url, browser, next_progress_step, depth=depth+1)
         except TimeoutException:
             # TODO(velovix): Add support for partially loaded pages
             print("Warning: page " + url + " timed out")
+        except RemoteDisconnected:
+            print("Warning: page " + url + " disconnected")
+        except URLError:
+            print("Warning: page " + url + " refused connection")
 
-        # Emit the URLs of all unique images in the page
-        for image_url in image_urls:
-            if image_url not in self.__found_image_urls:
-                self.__results.put((image_url, url))
-                self.__found_image_urls.append(image_url)
-
-        # Follow links to unique URLs that have the same domain as the parent
-        for link_url in link_urls:
-            if link_url not in self.__crawled_urls and _same_domain(url, link_url):
-                self._crawl_page(link_url, browser, depth=depth+1)
+        self.__scraped_page_cnt += 1
 
 
     def _get_image_urls(self, browser):

@@ -3,6 +3,7 @@ from config import Config
 from PyQt5 import QtCore, QtWidgets, QtGui  # All GUI things
 from results_gui import ResultsList
 from compare_image import CompareImage
+from threading import Thread, Timer
 import time
 import datetime
 import sys
@@ -128,6 +129,7 @@ class MainWindow(QtWidgets.QWidget):
                                self.config.search_depth,
                                self.config.max_browsers,
                                self.config.browser_timeout)
+        self.crawler.setDaemon(True)
 
         # Disable the scan button
         self.scan_btn.setDisabled(True)
@@ -326,8 +328,6 @@ class MainWindow(QtWidgets.QWidget):
             file.write(url + "\n")
 
         self.results_lst.add_item(image, id, url)
-
-
 
     # QT Events
     def closeEvent(self, event):
