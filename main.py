@@ -3,6 +3,8 @@ from config import Config
 from PyQt5 import QtCore, QtWidgets, QtGui  # All GUI things
 from results_gui import ResultsList
 from compare_image import CompareImage
+import time
+import datetime
 import sys
 import paths
 import cv2
@@ -21,7 +23,7 @@ Settings:
 """
 
 
-class MainWindow(QtWidgets.QDialog):
+class MainWindow(QtWidgets.QWidget):
 
     def __init__(self):
         super().__init__()
@@ -35,6 +37,7 @@ class MainWindow(QtWidgets.QDialog):
         self.settings_btn = QtWidgets.QPushButton("Settings")
         self.template_btn = QtWidgets.QPushButton("Template")
         self.progress_bar = QtWidgets.QProgressBar(self)
+        self.website_btn = QtWidgets.QPushButton("Websites")
         self.scan_cnt_lbl = QtWidgets.QLabel("")
         self.results_lst = ResultsList(self)
 
@@ -42,6 +45,11 @@ class MainWindow(QtWidgets.QDialog):
         self.scan_timer = QtCore.QTimer()
         self.scan_check_time = 100  # How often to check for images in self.crawler
         self.scanned_count = 0  # How many images have been scanned
+
+        # Create the filename for the output log
+        tstamp = datetime.datetime.fromtimestamp(time.time()).strftime('%m-%d %I-%M%p ')
+        self.output_file = str(tstamp) + "Results.txt"  # "Results" + str(tstamp) + ".txt"
+
 
         # Initialize the UI
         self.init_UI()
@@ -54,18 +62,22 @@ class MainWindow(QtWidgets.QDialog):
         self.settings_btn.setIcon(QtGui.QIcon(paths.settings))
         self.scan_btn.setIcon(QtGui.QIcon(paths.start_scan))
         self.template_btn.setIcon(QtGui.QIcon(paths.add_template))
+        self.website_btn.setIcon(QtGui.QIcon(paths.websites))
 
         self.scan_btn.setToolTip("This will start searching the websites specified in the list of websites to search")
         self.settings_btn.setToolTip("This will open a settings window to configure your scan")
         self.template_btn.setToolTip("This will add an image to search for in the images throughout the scan")
+        self.website_btn.setToolTip("This will let you edit what websites to search through")
 
         self.scan_btn.clicked.connect(self.start_scan)
         self.settings_btn.clicked.connect(self.open_settings)
         self.template_btn.clicked.connect(self.add_template)
+        self.website_btn.clicked.connect(self.open_websites)
 
         col2 = QtWidgets.QVBoxLayout()
         col2.addWidget(self.settings_btn)
         col2.addWidget(self.template_btn)
+        col2.addWidget(self.website_btn)
         col2.addStretch(1)
         col2.addWidget(self.scan_btn)
 
@@ -111,6 +123,7 @@ class MainWindow(QtWidgets.QDialog):
                                            QtWidgets.QMessageBox.Ok)
             return
 
+
         self.crawler = Crawler(self.config.websites,
                                self.config.search_depth,
                                self.config.max_browsers,
@@ -120,6 +133,7 @@ class MainWindow(QtWidgets.QDialog):
         self.scan_btn.setDisabled(True)
         self.settings_btn.setDisabled(True)
         self.template_btn.setDisabled(True)
+        self.website_btn.setDisabled(True)
 
         # Start crawling in another thread
         self.crawler.start()
@@ -230,6 +244,50 @@ class MainWindow(QtWidgets.QDialog):
         img = cv2.imread(img_file)
         self.comparer.add_template(img)
 
+    def open_websites(self):
+        window = QtWidgets.QDialog()
+
+        # Create the apply/cancel buttons, connect them, and format them
+        window.okBtn = QtWidgets.QPushButton('Ok')
+        window.okBtn.setMaximumWidth(100)
+        window.okBtn.clicked.connect(window.accept)
+
+
+        # Create a content box for the command to fill out parameters and GUI elements
+        window.content = QtWidgets.QVBoxLayout()
+        window.setMinimumHeight(700)
+        window.setMinimumWidth(500)
+        # window.content.setContentsMargins(20, 10, 20, 10)
+
+        # Now that the window is 'dressed', add "Cancel" and "Apply" buttons
+        buttonRow = QtWidgets.QHBoxLayout()
+        buttonRow.addStretch(1)
+        buttonRow.addWidget(window.okBtn)
+
+        # Create the main vertical layout, add everything to it
+        window.mainVLayout = QtWidgets.QVBoxLayout()
+        window.mainVLayout.addLayout(window.content)
+        # window.mainVLayout.addStretch(1)
+
+        # Set the main layout and general window parameters
+        window.setLayout(window.mainVLayout)
+        window.setWindowTitle("Scan Settings")
+        window.setWindowIcon(QtGui.QIcon(paths.settings))
+
+        window.mainVLayout.addLayout(buttonRow)  # Add button after, so hints appear above buttons
+
+        text_edit = QtWidgets.QPlainTextEdit()
+        text = open("Websites.txt", 'r').read()
+        text_edit.setPlainText(text)
+        text_edit.setLineWrapMode(QtWidgets.QPlainTextEdit.NoWrap)
+        window.content.addWidget(text_edit)
+
+        accepted = window.exec_()
+
+        # Write the updated websites to the websites file
+        with open("Websites.txt", "w") as file:
+            file.write(text_edit.toPlainText())
+
 
     # Scan Logic
     def check_crawler(self):
@@ -255,14 +313,32 @@ class MainWindow(QtWidgets.QDialog):
         timer()
 
     def add_match(self, image, id, url):
-        # TODO(Alex): Add something to a file log here
+        # Eliminate duplicate URL's
+        try:
+            with open(self.output_file, "r") as file:
+                if url in file.read(): return
+        except FileNotFoundError: pass
+
+        with open(self.output_file, "a") as file:
+            file.write(url + "\n")
+
         self.results_lst.add_item(image, id, url)
+
 
 
     # QT Events
     def closeEvent(self, event):
         # If there is an ongoing crawling session, close it
         if self.crawler is not None:
+            quit_msg = "You have a scan running. Are you sure you want to exit?"
+            reply = QtWidgets.QMessageBox.question(self, 'Message',
+                                               quit_msg, QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+
+            if reply == QtWidgets.QMessageBox.Yes:
+                event.accept()
+            else:
+                event.ignore()
+
             self.crawler.close()
 
 

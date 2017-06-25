@@ -18,6 +18,8 @@ class CompareImage:
         This will add a template image to compare other images to. It will add the whole image,
         then many other smaller parts of the image, to try to capture more images.
         """
+        if img is None: return
+
         h, w, _ = img.shape
         self.__templates.append(img)
 
@@ -52,11 +54,5 @@ class CompareImage:
         for tracked in self.tracker.history[0]:
             if tracked.match_ratio >= min_match_ratio:
                 return True
-            else:
-                print("IGNORING! ", tracked.match_ratio)
 
         return False
-        # # TODO: Iterate through the tracked items to see if at least 1 is the necessary match_ratio, else False
-        # print("Percent_match", self.tracker.trackedHistory[0][0].match_ratio)
-        # return True
-

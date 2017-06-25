@@ -1,17 +1,14 @@
 """Contains an implementation of a web crawler for finding image URLs.
 """
-from threading import Thread
-from PIL import Image
 from urllib.parse import urlparse
-from contextlib import closing
-from selenium.webdriver import Chrome
-from selenium.common.exceptions import TimeoutException
-import io
+from urllib.error import URLError
+from selenium.webdriver import PhantomJS as Driver
+from selenium.common.exceptions import TimeoutException, StaleElementReferenceException, WebDriverException
+from threading import Thread
 import cv2
 import numpy as np
 import queue
 import urllib
-
 
 
 def _same_domain(url1, url2):
@@ -63,7 +60,8 @@ class Crawler(Thread):
             if not self.__running:
                 break # End prematurely
 
-            browser = Chrome()
+            browser = Driver()
+
             # Set the page timeout
             browser.set_page_load_timeout(self.__load_timeout)
             self.__browser_pool.put(browser)
@@ -149,6 +147,7 @@ class Crawler(Thread):
         # Load up the page
         try:
             browser.get(url)
+
             image_urls = self._get_image_urls(browser)
             link_urls = self._get_link_urls(browser)
         except TimeoutException:
@@ -157,13 +156,13 @@ class Crawler(Thread):
 
         # Emit the URLs of all unique images in the page
         for image_url in image_urls:
-            if not image_url in self.__found_image_urls:
+            if image_url not in self.__found_image_urls:
                 self.__results.put((image_url, url))
                 self.__found_image_urls.append(image_url)
 
         # Follow links to unique URLs that have the same domain as the parent
         for link_url in link_urls:
-            if not link_url in self.__crawled_urls and _same_domain(url, link_url):
+            if link_url not in self.__crawled_urls and _same_domain(url, link_url):
                 self._crawl_page(link_url, browser, depth=depth+1)
 
 
@@ -177,8 +176,12 @@ class Crawler(Thread):
         images = browser.find_elements_by_css_selector("img")
         urls = []
         for image in images:
-            urls.append(image.get_attribute("src"))
-
+            try:
+                new_url = image.get_attribute("src")  # Throws error sometimes
+                if new_url is not None:
+                    urls.append(new_url)
+            except StaleElementReferenceException as e:
+                print("ERROR: Tried to get a URL that has already disappeared from page", e)
         return urls
 
 
@@ -188,11 +191,16 @@ class Crawler(Thread):
         :param browser: The browser that the page is loaded on
         :return: list of link URLs
         """
-
-        links = browser.find_elements_by_css_selector("a")
         urls = []
+
+        # OLD METHOD: Opens tons of sockets and causes failures in windows
+        links = browser.find_elements_by_css_selector("a")
         for link in links:
-            urls.append(link.get_attribute("href"))
+            try:
+                new_url = link.get_attribute("href")
+                urls.append(new_url)
+            except StaleElementReferenceException as e:
+                print("Error; Unable to get a link attribute: ", e)
 
         return urls
 
@@ -202,7 +210,15 @@ class Crawler(Thread):
         # image_data = urllib.request.urlopen(url).read()
         # return np.array(Image.open(io.BytesIO(image_data)))
 
-        resp = urllib.request.urlopen(url)
+        try:
+            resp = urllib.request.urlopen(url)
+        except URLError as e:
+            print("Error: Could not get image from: ", url, " because: ", e)
+            return None
+        except Exception as e:
+            print("URL Before crash: ", url)
+            raise
+
         image = np.asarray(bytearray(resp.read()), dtype="uint8")
         if len(image):
             image = cv2.imdecode(image, cv2.IMREAD_COLOR)
