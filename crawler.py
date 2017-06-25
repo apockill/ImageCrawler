@@ -5,6 +5,7 @@ from urllib.error import URLError
 from selenium.webdriver import PhantomJS as Driver
 from selenium.common.exceptions import TimeoutException, StaleElementReferenceException, WebDriverException
 from threading import Thread
+import paths
 import cv2
 import numpy as np
 import queue
@@ -60,7 +61,7 @@ class Crawler(Thread):
             if not self.__running:
                 break # End prematurely
 
-            browser = Driver()
+            browser = Driver(executable_path=paths.driver)
 
             # Set the page timeout
             browser.set_page_load_timeout(self.__load_timeout)

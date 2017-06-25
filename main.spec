@@ -2,7 +2,8 @@
 import os
 
 block_cipher = None
-icon_dir = "Icons\\"
+icon_dir = "Resources/Icons"
+
 icon_list = os.listdir(icon_dir)
 # ["start_scan.png",
 #  "settings.png",
@@ -11,6 +12,8 @@ icon_list = os.listdir(icon_dir)
 data = []
 for icon in icon_list:
     data.append((os.path.join(icon_dir, icon), os.path.join(icon_dir, icon), 'DATA'))
+
+data.append(("Resources/phantomjs.exe", "Resources/phantomjs.exe", 'DATA'))
 
 a = Analysis(['main.py'],
              pathex=['C:\\Users\\Alex Thiel\\Google Drive\\Projects\\Project - 2017 - NVIDIA Marketing Tool\\ImageCrawler'],

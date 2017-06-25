@@ -1,19 +1,21 @@
 import os
 import sys
 
-resourcesLoc = "Resources"
-icons_dir = "Icons\\"
+resources_loc = "Resources"
+icons_dir = os.path.join(resources_loc, "Icons\\")
 
 
-def resourcePath(relative_path):
+def resource_path(relative_path):
     """ Get absolute path to resource, works for dev and for PyInstaller """
     if hasattr(sys, '_MEIPASS'):
         return os.path.join(sys._MEIPASS, relative_path)
     return os.path.join(os.path.abspath("."), relative_path)
 
-icon_dir = resourcePath("Icons")
+icon_dir = resource_path(icons_dir)
 
 settings = os.path.join(icon_dir, "settings.png")
 start_scan = os.path.join(icon_dir, "start_scan.png")
 add_template = os.path.join(icon_dir, "add_template.png")
 websites = os.path.join(icon_dir, "websites.png")
+
+driver = os.path.join(resource_path(resources_loc), "phantomjs.exe")

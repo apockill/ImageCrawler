@@ -1,9 +1,13 @@
 Alex:
     - Add a check that template has enough detail
-    - Thread the image compare-er
+    - Thread the image loader from crawler so it doesnt block
+    - impliment is-done method
 
 Tyler:
     - Make sure that crawler can close faster
     - Could you make an icon (.ico) so the program can have a cool-guy executable? :D
     - Add a more intelligent progress bar
     - Get a count of websites crawled
+    - Add is-done method
+
+

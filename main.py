@@ -277,7 +277,9 @@ class MainWindow(QtWidgets.QWidget):
         window.mainVLayout.addLayout(buttonRow)  # Add button after, so hints appear above buttons
 
         text_edit = QtWidgets.QPlainTextEdit()
-        text = open("Websites.txt", 'r').read()
+        try:
+            text = open("Websites.txt", 'r').read()
+        except FileNotFoundError: text = ""
         text_edit.setPlainText(text)
         text_edit.setLineWrapMode(QtWidgets.QPlainTextEdit.NoWrap)
         window.content.addWidget(text_edit)
@@ -291,6 +293,7 @@ class MainWindow(QtWidgets.QWidget):
 
     # Scan Logic
     def check_crawler(self):
+        # TODO: Impliment is-done method
         """ This will pull an image that has been found by the crawler and analyze it """
         timer = lambda: self.scan_timer.singleShot(self.scan_check_time, self.check_crawler)
         self.progress_bar.setValue(self.crawler.progress)
@@ -329,6 +332,7 @@ class MainWindow(QtWidgets.QWidget):
     # QT Events
     def closeEvent(self, event):
         # If there is an ongoing crawling session, close it
+        # TODO: Impliment is-done method
         if self.crawler is not None:
             quit_msg = "You have a scan running. Are you sure you want to exit?"
             reply = QtWidgets.QMessageBox.question(self, 'Message',
