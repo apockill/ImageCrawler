@@ -50,6 +50,7 @@ class Crawler(Thread):
         self.__max_depth = max_depth
         self.__load_timeout = load_timeout
         self.__browser_instance_cnt = max_browser_instances
+        self.__browser_close_methods = []
         self.__is_finished = False
 
 
@@ -65,6 +66,9 @@ class Crawler(Thread):
                 break # End prematurely
 
             browser = Driver(executable_path=paths.driver)
+
+            # Set up the browser to be closable
+            self.__browser_close_methods.append(browser.quit)
 
             # Set the page timeout
             browser.set_page_load_timeout(self.__load_timeout)
@@ -95,13 +99,7 @@ class Crawler(Thread):
         for thread in crawl_threads:
             thread.join()
 
-        # Close all browser instances
-        for i in range(self.__browser_instance_cnt):
-            browser = self.__browser_pool.get()
-            try:
-                browser.close()
-            except Exception as e:
-                print("Warning: failed to close browser:", e)
+        self._close_browsers()
 
         self.__running = False
         self.__is_finished = True
@@ -255,7 +253,15 @@ class Crawler(Thread):
         else:
             return None
 
+    def _close_browsers(self):
+        """Closes all browser instances."""
+        for cl in self.__browser_close_methods:
+            print("closing a browser...")
+            cl()
+            print("Done")
+
     def close(self):
         """Prematurely stops crawling pages.
         """
         self.__running = False
+        self._close_browsers()
