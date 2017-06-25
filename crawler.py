@@ -1,11 +1,9 @@
 """Contains an implementation of a web crawler for finding image URLs.
 """
 from urllib.parse import urlparse
-from urllib.error import URLError
 from selenium.webdriver import PhantomJS as Driver
-from selenium.common.exceptions import TimeoutException, StaleElementReferenceException, WebDriverException
+from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
 from threading import Thread, Timer
-from http.client import RemoteDisconnected
 from urllib.error import URLError
 import paths
 import cv2
@@ -36,9 +34,11 @@ class Crawler(Thread):
 
         super(Crawler, self).__init__()
 
+        # A value from 0 to 100 showing how complete the crawl is.
         self.progress = 0
-        """A value from 0 to 100 showing how complete the crawl is.
-        """
+        self.scraped_page_cnt = 0
+        self.failed_page_cnt = 0
+
 
         self.__running = False
         self.__results = queue.Queue()
@@ -50,7 +50,6 @@ class Crawler(Thread):
         self.__max_depth = max_depth
         self.__load_timeout = load_timeout
         self.__browser_instance_cnt = max_browser_instances
-        self.__scraped_page_cnt = 0
         self.__is_finished = False
 
 
@@ -131,12 +130,6 @@ class Crawler(Thread):
 
         return None, None
 
-    def get_scraped_page_cnt(self):
-        """Returns the amount of scraped pages so far.
-        :return: Number of scraped pages
-        """
-        return self.__scraped_page_cnt
-
     def is_finished(self):
         """Returns true if the scraping job is finished.
         :return: True if scraping is finished
@@ -188,13 +181,13 @@ class Crawler(Thread):
                     self._crawl_page(link_url, browser, next_progress_step, depth=depth+1)
         except TimeoutException:
             # TODO(velovix): Add support for partially loaded pages
+            self.failed_page_cnt += 1
             print("Warning: page " + url + " timed out")
-        except RemoteDisconnected:
-            print("Warning: page " + url + " disconnected")
         except URLError:
+            self.failed_page_cnt
             print("Warning: page " + url + " refused connection")
 
-        self.__scraped_page_cnt += 1
+        self.scraped_page_cnt += 1
 
 
     def _get_image_urls(self, browser):
@@ -242,10 +235,15 @@ class Crawler(Thread):
         # return np.array(Image.open(io.BytesIO(image_data)))
 
         try:
-            resp = urllib.request.urlopen(url)
+            resp = urllib.request.urlopen(url, timeout=self.__load_timeout)
         except URLError as e:
             print("Error: Could not get image from: ", url, " because: ", e)
             return None
+        except ValueError as e:
+            print("Error: Tried to open a URL that had a length of zero",e)
+            return None
+        except ConnectionAbortedError as e:
+            print("Error: Computer lost internet connection", e)
         except Exception as e:
             print("URL Before crash: ", url)
             raise

@@ -13,7 +13,7 @@ class Config:
 
     DEFAULT_SETTINGS = {"search_depth": 1,
                         "max_browsers": 5,
-                        "browser_timeout": 60,
+                        "browser_timeout": 30,
                         "min_match_percent": 30}
 
     def __init__(self):

@@ -3,7 +3,7 @@ from config import Config
 from PyQt5 import QtCore, QtWidgets, QtGui  # All GUI things
 from results_gui import ResultsList
 from compare_image import CompareImage
-from threading import Thread, Timer
+from threading import Thread
 import time
 import datetime
 import sys
@@ -39,8 +39,10 @@ class MainWindow(QtWidgets.QWidget):
         self.template_btn = QtWidgets.QPushButton("Template")
         self.progress_bar = QtWidgets.QProgressBar(self)
         self.website_btn = QtWidgets.QPushButton("Websites")
-        self.scan_cnt_lbl = QtWidgets.QLabel("")
         self.results_lst = ResultsList(self)
+        self.img_cnt_lbl = QtWidgets.QLabel("")
+        self.web_cnt_lbl = QtWidgets.QLabel("")
+        self.fail_cnt_lbl = QtWidgets.QLabel("")
 
         # Create the timer for the scanner
         self.scan_timer = QtCore.QTimer()
@@ -51,6 +53,10 @@ class MainWindow(QtWidgets.QWidget):
         tstamp = datetime.datetime.fromtimestamp(time.time()).strftime('%m-%d %I-%M%p ')
         self.output_file = str(tstamp) + "Results.txt"  # "Results" + str(tstamp) + ".txt"
 
+        # Buffer for images that are next to be checked
+        self.getting_image = False
+        self.next_image = None
+        self.next_url = None
 
         # Initialize the UI
         self.init_UI()
@@ -79,12 +85,14 @@ class MainWindow(QtWidgets.QWidget):
         col2.addWidget(self.settings_btn)
         col2.addWidget(self.template_btn)
         col2.addWidget(self.website_btn)
+        col2.addWidget(self.img_cnt_lbl)
+        col2.addWidget(self.web_cnt_lbl)
+        col2.addWidget(self.fail_cnt_lbl)
         col2.addStretch(1)
         col2.addWidget(self.scan_btn)
 
         col1row1 = QtWidgets.QHBoxLayout()
         col1row1.addWidget(self.progress_bar)
-        col1row1.addWidget(self.scan_cnt_lbl)
 
         col1 = QtWidgets.QVBoxLayout()
         col1.addWidget(self.results_lst)
@@ -238,7 +246,7 @@ class MainWindow(QtWidgets.QWidget):
         img_file = QtWidgets.QFileDialog.getOpenFileName(self,
                                                     'Add Template Image',  # Window title
                                                     './',  # Directory
-                                                    '*.png')[0]  # File type
+                                                    'Images (*.png *.jpg)')[0]  # File type  '*.png'
         # If the user pressed cancel
         if img_file is None: return
 
@@ -295,26 +303,37 @@ class MainWindow(QtWidgets.QWidget):
 
     # Scan Logic
     def check_crawler(self):
-        # TODO: Impliment is-done method
+
         """ This will pull an image that has been found by the crawler and analyze it """
         timer = lambda: self.scan_timer.singleShot(self.scan_check_time, self.check_crawler)
         self.progress_bar.setValue(self.crawler.progress)
-        img, url = self.crawler.get_image()
 
-        # If no image is in the queue, ignore
-        if img is None:
-            timer()
-            return
+        self.web_cnt_lbl.setText("Sites: " + str(self.crawler.scraped_page_cnt))
+        self.fail_cnt_lbl.setText("Failures: " + str(self.crawler.failed_page_cnt))
 
-        if self.comparer.is_match(img, self.config.min_match_percent / 100.0):
-            print("GOT MATCH!", self.scanned_count)
-            cv2.imwrite("OUTPUT/" + str(self.scanned_count) + '.png', img)
-            cv2.waitKey(1)
-            self.add_match(img, "Image " + str(self.scanned_count), url)
+        if self.next_image is not None and self.getting_image is False:
+            # Scan the next image
+            if self.comparer.is_match(self.next_image, self.config.min_match_percent / 100.0):
+                print("GOT MATCH!", self.scanned_count)
+                cv2.imwrite("OUTPUT/" + str(self.scanned_count) + '.png', self.next_image)  # TODO: Should I save images to file?
+                self.add_match(self.next_image, "Image " + str(self.scanned_count), self.next_url)
 
-        # Finish up and set the timer again
-        self.scanned_count += 1
-        self.scan_cnt_lbl.setText("Tested: " + str(self.scanned_count))
+            self.img_cnt_lbl.setText("Imgs Tested: " + str(self.scanned_count))
+            self.scanned_count += 1
+            self.next_image = None
+            self.next_url = None
+
+        # Queue a new image using another thread
+        def setNew(self):
+            img, url = self.crawler.get_image()
+            self.next_image = img
+            self.next_url = url
+
+        if self.next_image is None and not self.getting_image:
+            self.getting_image = True
+            Thread(target=lambda: setNew(self)).start()
+            self.getting_image = False
+
         timer()
 
     def add_match(self, image, id, url):
@@ -328,6 +347,7 @@ class MainWindow(QtWidgets.QWidget):
             file.write(url + "\n")
 
         self.results_lst.add_item(image, id, url)
+
 
     # QT Events
     def closeEvent(self, event):
